@@ -27,20 +27,18 @@ class Chip8 {
 		Chip8()
 		{
 			// initialize PC
-		programCounter = START_ADDRESS;
+			programCounter = START_ADDRESS;
 
-		// load fonts into memory
-		for (unsigned int i = 0; i < FONT_SIZE; ++i) {
-			memory[FONT_START_ADDRESS + i] = fontset[i];
+			// load fonts into memory
+			for (unsigned int i = 0; i < FONT_SIZE; ++i) {memory[FONT_START_ADDRESS + i] = fontset[i];}
+			
+			// initialize rng
+			std::mt19937::result_type const seedval = std::rand();
+			rng.seed(seedval);
+			randByte = std::uniform_int_distribution<uint8_t>(0, 255U);
 		}
 
-		std::mt19937::result_type const seedval = std::rand();
-		rng.seed(seedval);
-		randByte = std::uniform_int_distribution<uint8_t>(0, 255U);
-
-		}
-
-		void LoadROM(char const* filename);
+		void load_ROM(char const* filename);
 		void cycle();
 
 		// instructions
@@ -82,7 +80,8 @@ class Chip8 {
 
 // loads contents of a ROM file
 
-void Chip8::LoadROM(char const* filename) {
+void Chip8::load_ROM(char const* filename)
+{
 	
 	std::ifstream file(filename, std::ios::binary | std::ios::ate);
 	
@@ -110,7 +109,7 @@ void Chip8::cycle()
 
 // main program loop
 
-int main() {
-
+int main()
+{
 	return 0;
 }
