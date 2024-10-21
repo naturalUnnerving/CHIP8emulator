@@ -1,5 +1,10 @@
 /* instruction definitions */
-
+#ifndef INST_H
+#define INST_H
+#ifndef CHIP8_H
+#define CHIP8_H
+#include "Chip8.hpp"
+#endif
 // CLS: clear the display
 
 void Chip8::OP_00E0()
@@ -368,3 +373,9 @@ void Chip8::OP_Fx65()
 		registers[i] = memory[index + i];
 	}
 }
+
+// null instruction
+
+void Chip8::OP_NULL() {}
+
+#endif

@@ -1,3 +1,7 @@
+/* fontset tiles */
+#ifndef FONT_H
+#define FONT_H
+
 const unsigned int FONT_SIZE = 80;
 const unsigned int FONT_START_ADDRESS = 0x50;
 
@@ -19,3 +23,5 @@ uint8_t fontset[FONT_SIZE] = {
 	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
+
+#endif
