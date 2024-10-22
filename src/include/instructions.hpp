@@ -34,7 +34,7 @@ void Chip8::OP_2nnn()
 {
     uint16_t address = opcode & 0x0FFFu;
     stack[stackPointer] = programCounter;
-    sp++;
+    stackPointer++;
     programCounter = address;
 }
 
@@ -213,10 +213,10 @@ void Chip8::OP_Dxyn()
 	uint8_t screenY = registers[Vy] % VIDEO_HEIGHT;
 	registers[0xF] = 0;
 	for (unsigned int row = 0; row < bt; row++) {
-		uint8_t spriteBite = memory[index + row];
+		uint8_t spriteByte = memory[index + row];
 		for (unsigned int column = 0; column < 8; column++) {
-			uint8_t spritePixel = spriteByte & (0x80u >> col);
-			uint32_t* screenPixel = &video[screenX + col + (screenY + row) * VIDEO_WIDTH];
+			uint8_t spritePixel = spriteByte & (0x80u >> column);
+			uint32_t* screenPixel = &video[screenX + column + (screenY + row) * VIDEO_WIDTH];
 			if (spritePixel) {if(*screenPixel == 0xFFFFFFFF) registers[0xF] = 1; *screenPixel ^= 0xFFFFFFFF;}
 		}
 	}
