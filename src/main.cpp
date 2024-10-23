@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <chrono>
 #include <random>
@@ -50,7 +51,7 @@ class Chip8
 		uint32_t video[64*32] {};
 		uint16_t opcode;
 		std::mt19937 rng;
-		std::uniform_int_distribution<uint8_t> randByte;
+		std::uniform_int_distribution<> randByte;
 
 		// constructor
 		Chip8();
@@ -113,7 +114,7 @@ Chip8::Chip8()
 	// initialize rng
 	std::mt19937::result_type const seedval = std::rand();
 	rng.seed(seedval);
-	randByte = std::uniform_int_distribution<uint8_t>(0, 255U);
+	randByte = std::uniform_int_distribution<>(0, 255U);
 }
 
 /* instruction definitions */
@@ -122,7 +123,7 @@ Chip8::Chip8()
 
 void Chip8::OP_00E0()
 {
-	memset(video, 0, sizeof(video));
+	std::memset(video, 0, sizeof(video));
 }
 
 // RET: return from a subroutine
@@ -312,7 +313,7 @@ void Chip8::OP_Cxkk()
 {
 	uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t bt = opcode & 0x00FFu;
-	registers[Vx] = randByte(rng) & bt;
+	registers[Vx] = (uint8_t)randByte(rng) & bt;
 }
 
 // DRW Vx, Vy, nibble: display n bite sprite at memory location I at positon (Vx, Vy) on the screen, set VF = collision
@@ -517,10 +518,10 @@ void Chip8::load_ROM(char const* filename)
 
 void Chip8::decode()
 {
-	switch ((opcode & 0xF000u) >> 3u)
+	switch ((opcode & 0xF000u) >> 16u)
 	{
 		case 0x0:
-		switch ((opcode & 0x000Fu) << 3u)
+		switch (opcode & 0x000Fu)
 		{
 			case 0x0: OP_00E0(); break;
 			case 0xE: OP_00EE(); break;
@@ -534,7 +535,7 @@ void Chip8::decode()
 		case 0x6: OP_6xkk(); break;
 		case 0x7: OP_7xkk(); break;
 		case 0x8:
-		switch ((opcode & 0x000Fu) << 3u)
+		switch (opcode & 0x000Fu)
 		{
 			case 0x0: OP_8xy0(); break;
 			case 0x1: OP_8xy1(); break;
@@ -553,14 +554,14 @@ void Chip8::decode()
 		case 0xC: OP_Cxkk(); break;
 		case 0xD: OP_Dxyn(); break;
 		case 0xE:
-		switch ((opcode & 0x000Fu) << 3u)
+		switch (opcode & 0x000Fu)
 		{
 			case 0xE: OP_Ex9E(); break;
 			case 0x1: OP_ExA1(); break;
 			default: OP_NULL();
 		} break;
 		case 0xF:
-		switch ((opcode & 0x00FFu) << 2u)
+		switch (opcode & 0x00FFu)
 		{
 			case 0x07: OP_Fx07(); break;
 			case 0x0A: OP_Fx0A(); break;
