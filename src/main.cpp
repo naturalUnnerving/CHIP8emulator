@@ -2,12 +2,15 @@
 #include <fstream>
 #include <chrono>
 #include <random>
+#include <iostream>
+#include <string>
+#include <SDL2/SDL.h>
 
 const unsigned int START_ADDRESS = 0x200;
 const unsigned int FONT_SIZE = 80;
 const unsigned int FONTSET_START_ADDRESS = 0x50;
-const unsigned int VIDEO_HEIGHT = 20;
-const unsigned int VIDEO_WIDTH = 20;
+const unsigned int VIDEO_HEIGHT = 320;
+const unsigned int VIDEO_WIDTH = 640;
 
 // fontset table
 
@@ -32,7 +35,8 @@ uint8_t fontset[FONT_SIZE] = {
 
 // Chip8 emulator class
 
-class Chip8 {
+class Chip8
+{
 	public:
 		uint8_t registers[16] {};
 		uint8_t memory[4096] {};
@@ -593,9 +597,152 @@ void Chip8::cycle()
 	if (soundTimer > 0) soundTimer--;
 }
 
+// SDL2 display platform
+
+class Display
+{
+	SDL_Window* window{};
+	SDL_Renderer* renderer{};
+	SDL_Texture* texture{};
+
+	public:
+		Display(char const* title, int windowWidth, int windowHeight, int textureWidth, int textureHeight)
+		{
+			SDL_Init(SDL_INIT_VIDEO);
+			window = SDL_CreateWindow(title, 0, 0, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
+			renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+			texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, textureWidth, textureHeight);
+		}
+
+		~Display()
+		{
+			SDL_DestroyTexture(texture);
+			SDL_DestroyRenderer(renderer);
+			SDL_DestroyWindow(window);
+			SDL_Quit();
+		}
+
+		void Update(void const* buffer, int pitch)
+		{
+			SDL_UpdateTexture(texture, nullptr, buffer, pitch);
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+			SDL_RenderPresent(renderer);
+		}
+
+		bool ProcessInput(uint8_t* keys)
+		{
+			bool quit = false;
+
+			SDL_Event event;
+
+			while (SDL_PollEvent(&event))
+			{
+				switch (event.type)
+				{
+					case SDL_QUIT: quit = true; break;
+					case SDL_KEYDOWN:
+					{
+						switch (event.key.keysym.sym)
+						{
+							case SDLK_ESCAPE: quit = true; break;
+							case SDLK_x: keys[0] = 1; break;
+							case SDLK_1: keys[1] = 1; break;
+							case SDLK_2: keys[2] = 1; break;
+							case SDLK_3: keys[3] = 1; break;
+							case SDLK_q: keys[4] = 1; break;
+							case SDLK_w: keys[5] = 1; break;
+							case SDLK_e: keys[6] = 1; break;
+							case SDLK_a: keys[7] = 1; break;
+							case SDLK_s: keys[8] = 1; break;
+							case SDLK_d: keys[9] = 1; break;
+							case SDLK_z: keys[0xA] = 1; break;
+							case SDLK_c: keys[0xB] = 1; break;
+							case SDLK_4: keys[0xC] = 1; break;
+							case SDLK_r: keys[0xD] = 1; break;
+							case SDLK_f: keys[0xE] = 1; break;
+							case SDLK_v: keys[0xF] = 1; break;
+						}
+					} break;
+
+					case SDL_KEYUP:
+					{
+						switch (event.key.keysym.sym)
+						{
+							case SDLK_ESCAPE: quit = true; break;
+							case SDLK_x: keys[0] = 0; break;
+							case SDLK_1: keys[1] = 0; break;
+							case SDLK_2: keys[2] = 0; break;
+							case SDLK_3: keys[3] = 0; break;
+							case SDLK_q: keys[4] = 0; break;
+							case SDLK_w: keys[5] = 0; break;
+							case SDLK_e: keys[6] = 0; break;
+							case SDLK_a: keys[7] = 0; break;
+							case SDLK_s: keys[8] = 0; break;
+							case SDLK_d: keys[9] = 0; break;
+							case SDLK_z: keys[0xA] = 0; break;
+							case SDLK_c: keys[0xB] = 0; break;
+							case SDLK_4: keys[0xC] = 0; break;
+							case SDLK_r: keys[0xD] = 0; break;
+							case SDLK_f: keys[0xE] = 0; break;
+							case SDLK_v: keys[0xF] = 0; break;
+						}
+					} break;
+				}
+			}
+			return quit;
+		}
+};
+
 // main program loop
 
-int main()
+int main(int argc, char* argv[])
 {
-	return 0;
+	// allow cycle delay, video scale and rom file args only
+	if (argc != 4)
+	{
+		std::cerr << "Error: Invalid arguments\n\n" << "Usage: " << argv[0] << "<CPU cycle delay> <video scale> <ROM>\n";
+		std::exit(EXIT_FAILURE);
+	}
+
+	// define cycle delay, video scale and rom filename
+	int cycleDelay = std::stoi(argv[1]);
+	int videoScale = std::stoi(argv[2]);
+	char const *romFilename = argv[3];
+
+	// initialize display
+	Display display("CHIP8Emulator", VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale, VIDEO_WIDTH, VIDEO_HEIGHT);
+
+	// initialize emulator and load rom file
+	Chip8 emulator;
+	emulator.load_ROM(romFilename);
+
+	// set video pitch
+	int videoPitch = sizeof(emulator.video[0]) * VIDEO_WIDTH;
+
+	// calculate the time of one cpu cycle specific to the user's machine
+	auto lastCycleTime = std::chrono::high_resolution_clock::now();
+
+	// set program running status
+	bool quit = false;
+
+	// program loop
+	while (!quit)
+	{
+		// set quit if display window is exited
+		quit = display.ProcessInput(emulator.keypad);
+
+		// get a timestamp from user's machine and calculate the delay between timestamp and previous cycle time
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastCycleTime).count();
+
+		// if real time delay is greater than the specified emulator cycle delay, process new emulator cycle
+		if (dt > cycleDelay)
+		{
+			lastCycleTime = currentTime;
+			emulator.cycle();
+			display.Update(emulator.video, videoPitch);
+		}
+	}
+	return EXIT_SUCCESS;
 }
