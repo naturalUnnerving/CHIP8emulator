@@ -631,9 +631,9 @@ class Display
 			SDL_RenderPresent(renderer);
 		}
 
-		bool ProcessInput(uint8_t* keys)
+		bool ProcessInput(uint8_t* keys, bool quit)
 		{
-			bool quit = false;
+			quit = false;
 
 			SDL_Event event;
 
@@ -702,7 +702,7 @@ int main(int argc, char* argv[])
 	// allow cycle delay, video scale and rom file args only
 	if (argc != 4)
 	{
-		std::cerr << "Error: Invalid arguments\n\n" << "Usage: " << argv[0] << "<CPU cycle delay> <video scale> <ROM>\n";
+		std::cerr << "Error: Invalid arguments\n\n" << "Usage: " << argv[0] << " <CPU cycle delay> <video scale> <ROM>\n";
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -712,7 +712,8 @@ int main(int argc, char* argv[])
 	char const *romFilename = argv[3];
 
 	// initialize display
-	Display display("CHIP8Emulator", VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale, VIDEO_WIDTH, VIDEO_HEIGHT);
+	char const* windowTitle = "CHIP8emulator - " + *romFilename;
+	Display display(windowTitle, VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale, VIDEO_WIDTH, VIDEO_HEIGHT);
 
 	// initialize emulator and load rom file
 	Chip8 emulator;
@@ -731,7 +732,7 @@ int main(int argc, char* argv[])
 	while (!quit)
 	{
 		// set quit if display window is exited
-		quit = display.ProcessInput(emulator.keypad);
+		quit = display.ProcessInput(emulator.keypad, quit);
 
 		// get a timestamp from user's machine and calculate the delay between timestamp and previous cycle time
 		auto currentTime = std::chrono::high_resolution_clock::now();
